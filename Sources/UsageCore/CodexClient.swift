@@ -27,13 +27,19 @@ public final class CodexClient {
     public static func discoverExecutable() -> URL? {
         let fm = FileManager.default
         let home = fm.homeDirectoryForCurrentUser.path
-        var candidates = [
-            "/Applications/Codex.app/Contents/Resources/codex",
-            "/Applications/ChatGPT.app/Contents/Resources/codex",
-            "\(home)/Applications/Codex.app/Contents/Resources/codex",
-            "\(home)/Applications/ChatGPT.app/Contents/Resources/codex",
-            "/opt/homebrew/bin/codex", "/usr/local/bin/codex"
+        let appBundles = [
+            "/Applications/Codex.app",
+            "/Applications/ChatGPT.app",
+            "\(home)/Applications/Codex.app",
+            "\(home)/Applications/ChatGPT.app"
         ]
+        var candidates = appBundles.flatMap { bundle in
+            [
+                "\(bundle)/Contents/Resources/codex",
+                "\(bundle)/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+            ]
+        }
+        candidates += ["/opt/homebrew/bin/codex", "/usr/local/bin/codex"]
         candidates += (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":").map { "\($0)/codex" }
         return candidates.first { fm.isExecutableFile(atPath: $0) }.map { URL(fileURLWithPath: $0) }
     }

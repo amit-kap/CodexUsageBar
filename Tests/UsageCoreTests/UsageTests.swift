@@ -7,6 +7,19 @@ private func decode(_ json: String) throws -> UsageSnapshot {
 private let fixture = #"{"rateLimits":{"limitId":"codex","primary":{"usedPercent":99,"windowDurationMins":300}},"rateLimitsByLimitId":{"codex":{"limitId":"codex","primary":{"usedPercent":23,"windowDurationMins":300},"secondary":{"usedPercent":67,"windowDurationMins":10080}},"spark":{"limitId":"spark","primary":{"usedPercent":98,"windowDurationMins":300}}}}"#
 
 @MainActor final class UsageTests {
+    func testDisplayWindowsPreservesBothWindows() throws {
+        let weeklyFirst = try decode(fixture).mainBucket!
+        expectEqual(weeklyFirst.displayWindows.map { $0.label }, ["Weekly", "5-hour"])
+        expectEqual(weeklyFirst.displayWindows.map { $0.percentage }, [67, 23])
+        let primaryFirst = try decode(#"{"rateLimits":{"primary":{"usedPercent":80,"windowDurationMins":300},"secondary":{"usedPercent":20,"windowDurationMins":10080}}}"#).mainBucket!
+        expectEqual(primaryFirst.displayWindows.map { $0.label }, ["5-hour", "Weekly"])
+        let missing = try decode(#"{"rateLimits":{"primary":{},"secondary":{"usedPercent":20}}}"#).mainBucket!
+        expectEqual(missing.displayWindows.map { $0.percentage }, [20, nil])
+        let single = try decode(#"{"rateLimits":{"secondary":{"usedPercent":20}}}"#).mainBucket!
+        expectEqual(single.displayWindows.count, 1)
+        let equal = try decode(#"{"rateLimits":{"primary":{"usedPercent":20,"windowDurationMins":300},"secondary":{"usedPercent":20,"windowDurationMins":10080}}}"#).mainBucket!
+        expectEqual(equal.displayWindows.map { $0.label }, ["5-hour", "Weekly"])
+    }
     func testPrefersMultiBucketAndMostConstrainedMainWindow() throws {
         let usage = try decode(fixture)
         expectEqual(usage.mainWindow?.percentage, 67)
@@ -155,6 +168,7 @@ private final class MockService: UsageService {
     @MainActor static func main() async {
         do {
             let usage = UsageTests()
+            try usage.testDisplayWindowsPreservesBothWindows()
             try usage.testPrefersMultiBucketAndMostConstrainedMainWindow()
             try usage.testMissingValuesAreNotZero()
             try usage.testDoesNotSubstituteDifferentModelBucket()
@@ -172,7 +186,7 @@ private final class MockService: UsageService {
             try await client.testSilentProcessTimesOut()
             try await client.testProcessExitFailsPromptly()
         } catch { fail("Unexpected error: \(error)") }
-        print("14 scenarios, \(assertions) assertions, \(failures) failures")
+        print("15 scenarios, \(assertions) assertions, \(failures) failures")
         exit(failures == 0 ? 0 : 1)
     }
 }

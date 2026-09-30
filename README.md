@@ -1,6 +1,6 @@
 # Codex Usage Bar
 
-A personal native macOS menu bar utility for your Codex account allowance. The menu bar shows the percentage on the left and Codex icon on the right. Click for usage windows, reset countdowns, refresh status, and controls.
+A personal native macOS menu bar utility for your Codex account allowance. The menu bar shows the percentage, a monochrome capacity meter, and the Codex icon from left to right. Click for usage windows, reset countdowns, refresh status, and controls.
 
 ## Build and run
 
@@ -20,7 +20,8 @@ The app runs without a Dock icon. Quit from its dropdown before replacing a runn
 - Applies `account/rateLimits/updated` notifications received by its own connection. Cross-client notification delivery is not assumed; polling also catches usage in other Codex sessions.
 - **Refresh now** (⌘R while the dropdown is open) makes an immediate request. Overlapping refresh requests are coalesced.
 - Displays **used** percentage by default. **Display → Used / Remaining** switches the menu bar and detailed percentages together; remaining is `100 − used`.
-- Uses the most consumed available window in the `codex` bucket. Other models appear separately. An absent main bucket displays `—`; missing fields are not interpreted as zero.
+- Uses the most consumed available window in the `codex` bucket. The menu lists each available main window once, with the most consumed readable window first; unavailable percentages remain visible as unavailable. Other models appear separately. An absent main bucket displays `—`; missing fields are not interpreted as zero.
+- The capacity meter follows Used / Remaining mode. Missing usage shows a dot; stale usage dims the meter and adds a diagonal mark.
 - Keeps the last successful reading if a refresh fails. `!` in the menu bar and an explanatory dropdown message mark stale data. A reset deadline never fabricates a new allowance; the app waits for the server's next reading.
 - The dropdown is an actual AppKit `NSMenu` assigned to `NSStatusItem.menu`. macOS handles placement under the menu bar item, styling, highlighting, keyboard navigation, and dismissal. There is no custom panel or arrow.
 - Other model limits are available in the native Other Models submenu.
@@ -43,7 +44,7 @@ swift run UsageCoreChecks
 "dist/Codex Usage Bar.app/Contents/MacOS/CodexUsageBar" --watch-check
 ```
 
-`UsageCoreChecks` is a standalone assertion runner that works with Command Line Tools, without XCTest or a full Xcode installation. It covers multi-window selection, absent data, legacy payloads, clamping, notification merges, reset boundaries, fragmented JSON-RPC lines, failed-refresh recovery, request deduplication, automatic polling and stopping, timeouts, and exited subprocesses.
+`UsageCoreChecks` is a standalone assertion runner that works with Command Line Tools, without XCTest or a full Xcode installation. It covers multi-window selection and menu ordering (including secondary-first, ties, and missing values), absent data, legacy payloads, clamping, notification merges, reset boundaries, fragmented JSON-RPC lines, failed-refresh recovery, request deduplication, automatic polling and stopping, timeouts, and exited subprocesses.
 
 `--check` reads live account limits once and exits. `--watch-check` observes the real 60-second automatic refresh for 70 seconds and requires at least two successful reads. Neither starts a model turn. `--show` opens the dropdown at launch for visual review.
 
@@ -55,16 +56,10 @@ swift run UsageCoreChecks
 - `scripts/build.sh`: builds and ad-hoc signs a local `.app` in `dist`.
 - `PLAN.md`: agreed scope and progress.
 
-This is a personal local build, not an official OpenAI application. The header uses the Codex icon from the installed application for this user's local utility. The app is ad-hoc signed, not notarized for distribution. Launch-at-login behavior depends on macOS approval and a stable app location.
+This is a personal local build, not an official OpenAI application. The menu bar uses bundled Codex artwork copied from the installed application for this user's local utility. The app is ad-hoc signed, not notarized for distribution. Launch-at-login behavior depends on macOS approval and a stable app location.
 
-## Dropdown refinement — September 6, 2026
+## Current validation — September 30, 2026
 
-Replaced the original popover with an arrowless NSPanel using native menu material. Removed the large headline, logo header, and cards. The panel aligns its right edge with the status item and recalculates its position on content changes. Used / Remaining is a native segmented control.
+The main-window menu regression is covered by the standalone checks. All 15 scenarios / 41 assertions pass. Release packaging and strict code-signature verification passed. Details are recorded in `PLAN.md`.
 
-Validation: release build and signature check passed; existing 14 scenarios / 35 assertions passed. Live native screenshots inspected in collapsed and expanded states; Used / Remaining values, refresh, model expansion, and Escape dismissal exercised through the UI.
-
-## Native-menu replacement — September 6, 2026
-
-The prior custom NSPanel/SwiftUI dropdown has been retired. The current app uses `NSStatusItem.menu` with a real AppKit `NSMenu`: native section header, compact informational quota/reset/freshness rows, Display submenu with Used/Remaining checkmarks, Other Models submenu, Refresh Now, Open Codex, Launch at Login, and Quit. Main usage supports both primary and secondary windows. Every displayed percentage follows the chosen mode. The menu-bar percentage stays left of the Codex icon.
-
-GPT-5.6 Terra implemented the menu controller as a bounded subtask. The parent integrated it, reviewed state and accessibility updates, restored secondary-window details, and built the app. Existing 14 scenarios / 35 assertions pass. Release build and code signature passed. Native screenshot/click verification of this replacement remains incomplete because the computer-use service timed out and then stalled. Prior UI screenshot evidence refers to the retired custom panel, not this menu.
+Native-menu screenshot/click verification remains incomplete. Earlier visual checks covered a retired custom panel. Launch-at-login behavior across reboot/login has not been tested.

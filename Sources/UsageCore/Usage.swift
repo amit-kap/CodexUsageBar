@@ -50,6 +50,14 @@ public struct UsageBucket: Codable, Equatable, Sendable {
     public var mostUsedWindow: UsageWindow? {
         windows.filter { $0.percentage != nil }.max { ($0.percentage ?? 0) < ($1.percentage ?? 0) }
     }
+    /// Keep each window once, with the most consumed readable window first.
+    public var displayWindows: [UsageWindow] {
+        windows.enumerated().sorted { lhs, rhs in
+            let left = lhs.element.percentage ?? -1
+            let right = rhs.element.percentage ?? -1
+            return left == right ? lhs.offset < rhs.offset : left > right
+        }.map { $0.element }
+    }
     public var displayName: String {
         if limitId == "codex" { return "Codex" }
         return limitName ?? limitId ?? "Codex"

@@ -1,75 +1,36 @@
 # Codex Usage Bar
 
-Approved September 6, 2026. Project: /Users/amitka/Personal/Projects/CodexUsageBar.
+Approved September 6, 2026. Updated September 30, 2026.
+Project: /Users/amitka/Personal/Projects/CodexUsageBar.
 
-## Goal
-A native macOS menu bar utility displaying the installed Codex app icon and percentage of the main Codex quota used. Clicking opens a compact native popover with per-window usage, reset countdowns, connection/freshness status, and manual refresh.
+## Goal and current behavior
 
-## Interaction contract
-- Launch as an accessory app with no Dock icon or main window.
-- Fetch usage at launch, every 60 seconds, on waking, and whenever the popover opens.
-- Subscribe to account/rateLimits/updated on the app-server connection; use polling to cover usage from other Codex clients.
-- Refresh now fetches immediately. Deduplicate overlapping requests and show loading feedback.
-- Main indicator uses the most consumed available window in the main codex bucket, never an average of unrelated model buckets. Label the chosen window in the popover.
-- Preserve last successful data on failure, clearly marked stale. Missing data displays an em dash, never 0%.
-- Offer used/remaining display, Open Codex, launch at login, and Quit.
+A native macOS menu bar utility showing the main Codex allowance as a percentage, monochrome capacity meter, and bundled Codex icon. Clicking opens an AppKit `NSMenu` attached to `NSStatusItem.menu`.
+
+- Run as an accessory app with no Dock icon or main window.
+- Read usage on launch, every 60 seconds, on wake, and when the menu opens; deduplicate overlapping refreshes.
+- Apply `account/rateLimits/updated` notifications on the owned connection, with polling for other clients' activity.
+- Use the most consumed readable window in the `codex` bucket for the status indicator. Show each available main window once in the menu, most consumed first, followed by the other window and its reset countdown. Preserve unavailable window details.
+- Preserve the last successful reading on failure and mark stale data. Missing usage never implies 0%; reaching a reset deadline waits for a server update.
+- Offer native Used/Remaining choices, Other Models submenu, Refresh Now, Open Codex, opt-in Launch at Login, and Quit.
+- Meter fill follows the display mode; its monochrome color follows the menu-bar appearance. A dot indicates missing usage; dimming and a diagonal mark indicate stale usage.
 
 ## Implementation
-1. Verify the installed Codex CLI handshake and read-only usage endpoint.
-2. Build a Swift Package: testable Foundation models/JSON-RPC client plus AppKit status item and SwiftUI popover. Minimum macOS 13.
-3. Use an owned stdio app-server subprocess, existing Codex authentication, request timeouts, safe teardown, and reconnect after failure. Never read or copy auth tokens.
-4. Package an ad-hoc signed .app with reproducible build script and documentation. Login startup is opt-in using ServiceManagement.
-5. Test payload variants, selection, missing values, notifications, timeouts, and live refresh; inspect the running UI.
 
-## Validation and delivery
-- Swift tests and release build.
-- Read-only live integration smoke test without starting model turns.
-- Verify launch, dropdown, manual refresh, automatic refresh, and error handling where practical.
-- Save source, PLAN.md, README.md, and the runnable app in this project. Personal local build; App Store distribution/notarization is out of scope.
+- Swift Package targeting macOS 13+, with Foundation/Combine usage models, refresh state, and JSON-RPC transport, plus AppKit UI and ServiceManagement login startup.
+- One owned `codex app-server --stdio` subprocess using existing authentication, 20-second request timeouts, teardown, and reconnect after failure. No auth-token parsing or model turns.
+- `scripts/build.sh` creates an ad-hoc signed app in `dist`. Personal local distribution; notarization and App Store delivery are out of scope.
+- `UsageGaugeIcon.swift` contains an older standalone template meter helper; the current status indicator is drawn in `App.swift`.
 
-## Progress
-- [x] Confirmed scope and destination.
-- [x] Verified Swift toolchain and existing ChatGPT login.
-- [x] Live app-server transport verified.
-- [x] Application implemented and packaged.
-- [x] Automated checks and live automatic-refresh validation complete.
-- [x] Running dropdown inspected through native accessibility.
-- [ ] Screenshot review and automated button-click verification (computer-use service timed out).
+## September 30, 2026 maintenance
 
-## Delivery notes — September 6, 2026
+- Fixed the menu repeating the secondary window when it was most consumed and omitting the primary window.
+- Added regression coverage for secondary-first and primary-first ordering, missing percentages, a single window, and tied usage.
+- Updated README and this plan to describe the current native menu and monochrome meter.
+- Validation: `swift run UsageCoreChecks` passed 15 scenarios / 41 assertions with zero failures. Release packaging succeeded, and `codesign --verify --deep --strict` passed for `dist/Codex Usage Bar.app`.
 
-- Source and runnable app saved in the confirmed project folder.
-- `swift run UsageCoreChecks`: 14 scenarios, 35 assertions, 0 failures.
-- Release build and strict code-signature verification passed.
-- `--check`: live Codex weekly usage read successfully (6% at validation time).
-- `--watch-check`: one successful read at 4 seconds, two by 69 seconds, no errors; validates the actual 60-second refresh cycle.
-- Native accessibility inspection confirmed the live headline, per-window progress indicators, reset times, refresh action, display mode, login checkbox, Open Codex, and Quit. Screenshots and subsequent clicks could not be verified because the computer-use service repeatedly timed out.
-- Launch at login remains opt-in; reboot/login behavior was not tested.
-- The menu bar and header reuse the actual installed Codex artwork. No network asset dependency.
-- No model prompts, quota reset consumption, or account changes were performed.
+## Previous validation and remaining checks
 
-## Requested refinement — September 6, 2026
+September 6 records report 14 scenarios / 35 assertions passing, release build/signature verification, and live read-only usage and 60-second polling checks. Those live checks have not been repeated for this maintenance change.
 
-- [x] Anchor dropdown to menu bar button in global screen coordinates.
-- [x] Remove top arrow by replacing NSPopover with an arrowless NSPanel.
-- [x] Compact native menu material, flat rows, and collapsed secondary model details.
-- [x] Percentage left, Codex icon right in menu bar.
-- [x] Used / Remaining segmented toggle applies to every displayed quota.
-- [x] Release build, signature, and existing 14 scenarios / 35 assertions pass.
-- [x] Native UI screenshot review, toggle, expansion, refresh, and Escape dismissal checked successfully in this refinement.
-
-## Native-menu correction — September 6, 2026
-
-- [x] Delegate the bounded menu controller to GPT-5.6 Terra; parent retains integration/review.
-- [x] Replace custom NSPanel/SwiftUI dropdown with NSStatusItem.menu and native NSMenuItems.
-- [x] Native Used/Remaining checkmarked choices, Other Models submenu, refresh and lifecycle actions.
-- [x] Review primary/secondary window display and accessibility titles.
-- [x] Release build, signature and 14 validation scenarios / 35 assertions passed.
-- [ ] Visual review of the native menu: blocked by computer-use tool timeouts/stall. Earlier screenshots cover the retired panel.
-
-## Battery-like gauge — September 6, 2026
-
-- [x] Add a vector capsule capacity gauge beside the menu-bar percentage.
-- [x] Fill follows Used or Remaining display mode; colour follows remaining capacity.
-- [x] Represent unavailable and stale usage without implying a valid empty value.
-- [x] Build, standalone checks, local signature verification, and relaunch completed.
+The original popover and later custom panel were replaced by the native menu. Earlier screenshots and click checks cover the retired panel. Native-menu screenshot/click verification remains outstanding after computer-use timeouts. Launch at login remains opt-in; reboot/login behavior is untested.

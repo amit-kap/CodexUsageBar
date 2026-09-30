@@ -44,12 +44,12 @@ final class NativeUsageMenu: NSObject, NSMenuDelegate {
         let mode = preferences.showRemaining ? "remaining" : "used"
         let snapshot = monitor.snapshot
 
-        if let bucket = snapshot?.mainBucket, let primary = bucket.mostUsedWindow {
+        if let windows = snapshot?.mainBucket?.displayWindows, let primary = windows.first {
             setTitle(usageTitle(for: primary, mode: mode), on: primaryUsageItem, style: .primary)
             setTitle(primary.resetDescription(now: now), on: primaryResetItem, style: .secondary)
             primaryUsageItem.isHidden = false
             primaryResetItem.isHidden = false
-            if let secondary = bucket.windows.dropFirst().first {
+            if let secondary = windows.dropFirst().first {
                 setTitle(usageTitle(for: secondary, mode: mode), on: secondaryUsageItem, style: .primary)
                 setTitle(secondary.resetDescription(now: now), on: secondaryResetItem, style: .secondary)
                 secondaryUsageItem.isHidden = false
